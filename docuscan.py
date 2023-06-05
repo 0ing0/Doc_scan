@@ -1,10 +1,13 @@
-import cv2 
+import cv2
 import numpy as np
+import pytesseract
 from matplotlib import pyplot as plt
-import math
+import math 
+# from PIL import Image
 
 
 img = cv2.imread('doc.jpg', 1)
+
 image_bordered = cv2.copyMakeBorder(img, top=10, bottom=10, left=10, right=10, borderType=cv2.BORDER_CONSTANT) 
 
 
@@ -14,7 +17,7 @@ kernel = np.ones((3,3), np.uint8)
 wiped_img = cv2.morphologyEx(gray,cv2.MORPH_CLOSE,kernel,iterations=5)
 ed_img = cv2.Canny(wiped_img, 100, 200)
 #image_bordered = cv2.copyMakeBorder(ed_img, top=10, bottom=10, left=10, right=10, borderType=cv2.BORDER_CONSTANT) 
-cv2.imshow('canny',ed_img)
+# cv2.imshow('canny',ed_img)
 cont_list, _ = cv2.findContours(ed_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 cntsSorted = sorted(cont_list, key= cv2.contourArea, reverse=True)
 
@@ -56,6 +59,7 @@ p = cv2.getPerspectiveTransform(pts1,pts2)
 
 result = cv2.warpPerspective(img, p, (doc_width,doc_length))
 
+cv2.imwrite('result.jpg',result)
 #---------- document image was extrated ------------(documents that are not fully in frame don't work. Also doesn't work for images that are already scanned.)
 #paste code back after thsi point if the new stuff doesn't work
 #the old code is in repository.py
@@ -83,6 +87,42 @@ for r in grouped_list:
     rect = cv2.rectangle(result_copy,(r[0],r[1]),(r[0]+r[2],r[1]+r[3]),(0,255,0,),1)
     pass
 #cv2.drawContours(result,cnts,-1,(0,255,255),1)
+#-----------------------non-ocr text segmentation done----------------------------------------------*
+#--------------------------------implementing ocr from this point on-------------------------
+
+
+# img = imcv2.imread('test.jpg')
+
+result = cv2.resize(result, (600, 360))
+# color_cvt = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+# pil_img = Image.fromarray(color_cvt)
+pytesseract.pytesseract.tesseract_cmd = r'C:/Program Files/Tesseract-OCR/tesseract.exe'
+# pytesseract.pytesseract.tesseract_cmd = r'C:/Users/inaya/Downloads/tesseract.exe'
+
+
+# print("Img type : ", type(img))
+# print("Img shape ", img.shape)
+
+hImg, wImg, _ = result.shape
+print(pytesseract.image_to_string(result))
+
+boxes = pytesseract.image_to_boxes(result)
+for b in boxes.splitlines():
+    b = b.split(" ")
+
+print(b)
+x, y, w, h = int(b[1]), int(b[2]), int(b[3]), int(b[4])
+cv2.rectangle(result, (x, hImg - y), (w, hImg - h), (50, 50, 255), 1 )
+cv2.putText(result, b[0], (x, hImg - y + 13), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 205, 50), 1)
+
+cv2.imshow('Detected text', result)
+
+
+
+
+
+
 cv2.imshow('detected document',result_copy )
 cv2.waitKey(0)
 cv2.destroyAllWindows
+
